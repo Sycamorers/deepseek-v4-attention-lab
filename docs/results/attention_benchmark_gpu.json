@@ -1,0 +1,252 @@
+[
+  {
+    "attention": "dense",
+    "seq_len": 512,
+    "runtime_ms": 0.7931455998914316,
+    "peak_memory_mb": 21.1328125,
+    "kv_cache_mb": 0.25,
+    "score_count": 1048576,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "sliding_window",
+    "seq_len": 512,
+    "runtime_ms": 0.7760579988826066,
+    "peak_memory_mb": 21.2578125,
+    "kv_cache_mb": 0.06298828125,
+    "score_count": 264192,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "csa",
+    "seq_len": 512,
+    "runtime_ms": 1.8784251995384693,
+    "peak_memory_mb": 21.455078125,
+    "kv_cache_mb": 0.07861328125,
+    "score_count": 280576,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "hca",
+    "seq_len": 512,
+    "runtime_ms": 1.7326369998045266,
+    "peak_memory_mb": 21.54345703125,
+    "kv_cache_mb": 0.06689453125,
+    "score_count": 329728,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "hybrid",
+    "seq_len": 512,
+    "runtime_ms": 3.571743000065908,
+    "peak_memory_mb": 21.81396484375,
+    "kv_cache_mb": 0.1455078125,
+    "score_count": 610304,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "dense",
+    "seq_len": 1024,
+    "runtime_ms": 0.7634655979927629,
+    "peak_memory_mb": 58.638671875,
+    "kv_cache_mb": 0.5,
+    "score_count": 4194304,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "sliding_window",
+    "seq_len": 1024,
+    "runtime_ms": 0.7729185977950692,
+    "peak_memory_mb": 58.763671875,
+    "kv_cache_mb": 0.06298828125,
+    "score_count": 528384,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "csa",
+    "seq_len": 1024,
+    "runtime_ms": 1.8561306002084166,
+    "peak_memory_mb": 59.1396484375,
+    "kv_cache_mb": 0.09423828125,
+    "score_count": 561152,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "hca",
+    "seq_len": 1024,
+    "runtime_ms": 1.7560423992108554,
+    "peak_memory_mb": 59.56494140625,
+    "kv_cache_mb": 0.07080078125,
+    "score_count": 790528,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "hybrid",
+    "seq_len": 1024,
+    "runtime_ms": 3.5626258002594113,
+    "peak_memory_mb": 59.96044921875,
+    "kv_cache_mb": 0.1650390625,
+    "score_count": 1351680,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "dense",
+    "seq_len": 2048,
+    "runtime_ms": 1.2631427991436794,
+    "peak_memory_mb": 207.025390625,
+    "kv_cache_mb": 1.0,
+    "score_count": 16777216,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "sliding_window",
+    "seq_len": 2048,
+    "runtime_ms": 1.3373213994782418,
+    "peak_memory_mb": 207.275390625,
+    "kv_cache_mb": 0.06298828125,
+    "score_count": 1056768,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "csa",
+    "seq_len": 2048,
+    "runtime_ms": 2.515730800223537,
+    "peak_memory_mb": 208.0087890625,
+    "kv_cache_mb": 0.12548828125,
+    "score_count": 1122304,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "hca",
+    "seq_len": 2048,
+    "runtime_ms": 2.360572401084937,
+    "peak_memory_mb": 209.859375,
+    "kv_cache_mb": 0.07861328125,
+    "score_count": 2105344,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "hybrid",
+    "seq_len": 2048,
+    "runtime_ms": 4.8543927987338975,
+    "peak_memory_mb": 210.5048828125,
+    "kv_cache_mb": 0.2041015625,
+    "score_count": 3227648,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "dense",
+    "seq_len": 4096,
+    "runtime_ms": 4.083290399285033,
+    "peak_memory_mb": 797.798828125,
+    "kv_cache_mb": 2.0,
+    "score_count": 67108864,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "sliding_window",
+    "seq_len": 4096,
+    "runtime_ms": 4.330273199593648,
+    "peak_memory_mb": 798.298828125,
+    "kv_cache_mb": 0.06298828125,
+    "score_count": 2113536,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "csa",
+    "seq_len": 4096,
+    "runtime_ms": 6.021191200125031,
+    "peak_memory_mb": 799.7470703125,
+    "kv_cache_mb": 0.18798828125,
+    "score_count": 2244608,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "hca",
+    "seq_len": 4096,
+    "runtime_ms": 5.3792824008269235,
+    "peak_memory_mb": 807.4482421875,
+    "kv_cache_mb": 0.09423828125,
+    "score_count": 6307840,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "hybrid",
+    "seq_len": 4096,
+    "runtime_ms": 11.327859800076112,
+    "peak_memory_mb": 808.59375,
+    "kv_cache_mb": 0.2822265625,
+    "score_count": 8552448,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "dense",
+    "seq_len": 8192,
+    "runtime_ms": 15.355091998935677,
+    "peak_memory_mb": 3155.345703125,
+    "kv_cache_mb": 4.0,
+    "score_count": 268435456,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "sliding_window",
+    "seq_len": 8192,
+    "runtime_ms": 16.39641440124251,
+    "peak_memory_mb": 3156.345703125,
+    "kv_cache_mb": 0.06298828125,
+    "score_count": 4227072,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "csa",
+    "seq_len": 8192,
+    "runtime_ms": 20.021753798937425,
+    "peak_memory_mb": 3159.2236328125,
+    "kv_cache_mb": 0.31298828125,
+    "score_count": 4489216,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "hca",
+    "seq_len": 8192,
+    "runtime_ms": 17.972313798964024,
+    "peak_memory_mb": 3190.6259765625,
+    "kv_cache_mb": 0.12548828125,
+    "score_count": 21004288,
+    "device": "cuda",
+    "dtype": "float16"
+  },
+  {
+    "attention": "hybrid",
+    "seq_len": 8192,
+    "runtime_ms": 37.92437519878149,
+    "peak_memory_mb": 3192.771484375,
+    "kv_cache_mb": 0.4384765625,
+    "score_count": 25493504,
+    "device": "cuda",
+    "dtype": "float16"
+  }
+]

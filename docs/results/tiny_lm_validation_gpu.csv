@@ -1,0 +1,11 @@
+task,attention,validation_loss
+local,dense,2.3013179898262024
+local,sliding_window,2.298239052295685
+local,csa,2.286640018224716
+local,hca,2.2699020206928253
+local,hybrid,2.2826521396636963
+retrieval,dense,4.850669622421265
+retrieval,sliding_window,4.850096106529236
+retrieval,csa,4.865658462047577
+retrieval,hca,4.859560608863831
+retrieval,hybrid,4.8547751903533936

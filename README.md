@@ -324,6 +324,10 @@ HCA should reduce cost by applying dense attention over a much shorter compresse
 
 Hybrid CSA/HCA attention is intended to study whether sparse long-range retrieval and broad compressed context can complement each other in small controlled settings.
 
+## Final GPU Results
+
+A regenerated RTX 3090 result snapshot with benchmark plots, toy-LM plots, and conclusions is available in [docs/results/final_results.md](docs/results/final_results.md).
+
 ## Project Structure
 
 ```text
@@ -428,4 +432,3 @@ Suggested repository citation:
 ## License
 
 This repository is licensed under the Apache License 2.0. See [LICENSE](LICENSE) for details.
-
