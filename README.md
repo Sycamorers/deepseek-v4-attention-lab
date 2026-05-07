@@ -17,6 +17,7 @@ Implemented components include:
 - Hybrid CSA/HCA attention blocks
 - Tiny Transformer experiments
 - Runtime, memory, KV-cache, and attention-score benchmarks
+- Controlled sparse-selection and compression diagnostics
 
 This repository is intended for educational and research purposes. It is not the official DeepSeek implementation, and it is not provided as a commercial product or service.
 
@@ -327,6 +328,8 @@ Hybrid CSA/HCA attention is intended to study whether sparse long-range retrieva
 ## Final GPU Results
 
 A regenerated RTX 3090 result snapshot with benchmark plots, toy-LM plots, and conclusions is available in [docs/results/final_results.md](docs/results/final_results.md).
+
+A redesigned 3090-friendly experiment plan covering robust benchmark repeats, sparse-label retrieval tasks, multi-seed tiny-LM runs, and top-k/compression diagnostics is available in [docs/experiment_design.md](docs/experiment_design.md).
 
 ## Project Structure
 

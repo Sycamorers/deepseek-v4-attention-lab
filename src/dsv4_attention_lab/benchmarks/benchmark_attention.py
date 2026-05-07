@@ -6,6 +6,7 @@ import argparse
 import csv
 import json
 import math
+import statistics
 import time
 from pathlib import Path
 from typing import Iterable
@@ -130,12 +131,18 @@ def synchronize_if_needed(device: torch.device) -> None:
         torch.cuda.synchronize(device)
 
 
-def run_one(module: nn.Module, x: torch.Tensor, device: torch.device, iters: int) -> tuple[float, int, torch.Tensor | AttentionOutput]:
+def run_one(
+    module: nn.Module,
+    x: torch.Tensor,
+    device: torch.device,
+    iters: int,
+    warmup_iters: int,
+) -> tuple[float, int, torch.Tensor | AttentionOutput]:
     """Run one benchmark and return average milliseconds and peak bytes."""
 
     module.eval()
     with torch.no_grad():
-        for _ in range(1):
+        for _ in range(warmup_iters):
             _ = module(x)
         synchronize_if_needed(device)
         if device.type == "cuda":
@@ -151,6 +158,23 @@ def run_one(module: nn.Module, x: torch.Tensor, device: torch.device, iters: int
         elapsed_ms = (time.perf_counter() - start) * 1000.0 / iters
         peak_memory = torch.cuda.max_memory_allocated(device) if device.type == "cuda" else 0
     return elapsed_ms, peak_memory, result
+
+
+def percentile(values: list[float], q: float) -> float:
+    """Return a simple linear percentile for a non-empty list."""
+
+    if not values:
+        raise ValueError("percentile requires at least one value")
+    ordered = sorted(values)
+    if len(ordered) == 1:
+        return ordered[0]
+    position = (len(ordered) - 1) * q
+    lower = math.floor(position)
+    upper = math.ceil(position)
+    if lower == upper:
+        return ordered[lower]
+    weight = position - lower
+    return ordered[lower] * (1.0 - weight) + ordered[upper] * weight
 
 
 def print_summary(rows: Iterable[dict[str, object]]) -> None:
@@ -181,6 +205,8 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--seed", type=int, default=1234)
     parser.add_argument("--output-dir", default="outputs")
     parser.add_argument("--iters", type=int, default=3)
+    parser.add_argument("--warmup-iters", type=int, default=1)
+    parser.add_argument("--repeats", type=int, default=1)
     parser.add_argument("--attention", default="all", choices=["all", "dense", "sliding_window", "csa", "hca", "hybrid"])
     parser.add_argument("--use-attention-sink", action="store_true")
     args = parser.parse_args(argv)
@@ -197,7 +223,13 @@ def main(argv: list[str] | None = None) -> None:
         x = torch.randn(args.batch_size, seq_len, args.hidden_size, device=device, dtype=dtype)
         for name in names:
             module = make_attention_module(name, args).to(device=device, dtype=dtype)
-            runtime_ms, peak_memory, result = run_one(module, x, device, args.iters)
+            runtimes: list[float] = []
+            peak_memories: list[int] = []
+            result: torch.Tensor | AttentionOutput = x
+            for _ in range(args.repeats):
+                runtime_ms, peak_memory, result = run_one(module, x, device, args.iters, args.warmup_iters)
+                runtimes.append(runtime_ms)
+                peak_memories.append(peak_memory)
             output = module_output_tensor(result)
             if not torch.isfinite(output).all():
                 raise RuntimeError(f"{name} produced non-finite values")
@@ -208,12 +240,20 @@ def main(argv: list[str] | None = None) -> None:
                 {
                     "attention": name,
                     "seq_len": seq_len,
-                    "runtime_ms": runtime_ms,
-                    "peak_memory_mb": peak_memory / (1024**2),
+                    "runtime_ms": statistics.median(runtimes),
+                    "runtime_ms_p25": percentile(runtimes, 0.25),
+                    "runtime_ms_p75": percentile(runtimes, 0.75),
+                    "runtime_ms_min": min(runtimes),
+                    "runtime_ms_max": max(runtimes),
+                    "peak_memory_mb": statistics.median(peak_memories) / (1024**2),
+                    "peak_memory_mb_max": max(peak_memories) / (1024**2),
                     "kv_cache_mb": kv_cache_bytes / (1024**2),
                     "score_count": estimate_score_count(name, args, seq_len),
                     "device": str(device),
                     "dtype": str(dtype).replace("torch.", ""),
+                    "iters": args.iters,
+                    "warmup_iters": args.warmup_iters,
+                    "repeats": args.repeats,
                 }
             )
 
@@ -233,4 +273,3 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
-

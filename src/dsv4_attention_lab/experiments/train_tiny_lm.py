@@ -10,9 +10,35 @@ from pathlib import Path
 import torch
 
 from ..configs import TinyTransformerConfig
-from ..experiments.synthetic_long_context import make_batch
+from ..experiments.synthetic_long_context import IGNORE_INDEX, SUPPORTED_TASKS, make_batch
 from ..models.tiny_transformer import TinyTransformer
 from ..utils import dataclass_to_json_dict, dtype_from_string, set_seed
+
+
+def parse_int_list(value: str) -> list[int]:
+    """Parse a comma-separated integer list."""
+
+    return [int(item.strip()) for item in value.split(",") if item.strip()]
+
+
+def supervised_accuracy(logits: torch.Tensor, labels: torch.Tensor) -> tuple[float, int]:
+    """Return accuracy over non-ignored labels."""
+
+    supervised = labels != IGNORE_INDEX
+    count = int(supervised.sum().item())
+    if count == 0:
+        return 0.0, 0
+    predictions = logits.argmax(dim=-1)
+    correct = int((predictions[supervised] == labels[supervised]).sum().item())
+    return correct / count, count
+
+
+def make_generator(device: torch.device, seed: int) -> torch.Generator:
+    """Create a device-local generator for comparable synthetic data streams."""
+
+    generator = torch.Generator(device=device)
+    generator.manual_seed(seed)
+    return generator
 
 
 def evaluate(
@@ -24,22 +50,41 @@ def evaluate(
     seq_len: int,
     vocab_size: int,
     device: torch.device,
-) -> float:
-    """Evaluate average validation loss."""
+    generator: torch.Generator,
+) -> dict[str, float | int]:
+    """Evaluate average validation loss and supervised-token accuracy."""
 
     model.eval()
     losses: list[float] = []
+    correct = 0.0
+    total = 0
     with torch.no_grad():
         for _ in range(batches):
-            input_ids, labels = make_batch(task, batch_size, seq_len, vocab_size, device)
-            losses.append(float(model(input_ids, labels=labels)["loss"].item()))
+            input_ids, labels = make_batch(task, batch_size, seq_len, vocab_size, device, generator=generator)
+            output = model(input_ids, labels=labels)
+            losses.append(float(output["loss"].item()))
+            accuracy, count = supervised_accuracy(output["logits"], labels)
+            correct += accuracy * count
+            total += count
     model.train()
-    return sum(losses) / len(losses)
+    return {
+        "validation_loss": sum(losses) / len(losses),
+        "validation_accuracy": correct / total if total else 0.0,
+        "validation_tokens": total,
+    }
 
 
-def train_one_attention(args: argparse.Namespace, attention: str, device: torch.device, dtype: torch.dtype) -> dict[str, object]:
+def train_one_attention(
+    args: argparse.Namespace,
+    attention: str,
+    device: torch.device,
+    dtype: torch.dtype,
+    *,
+    seed: int,
+) -> dict[str, object]:
     """Train one attention variant and return metrics."""
 
+    set_seed(seed)
     config = TinyTransformerConfig(
         vocab_size=args.vocab_size,
         max_seq_len=args.seq_len,
@@ -56,20 +101,43 @@ def train_one_attention(args: argparse.Namespace, attention: str, device: torch.
     )
     model = TinyTransformer(config).to(device=device, dtype=dtype)
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
+    train_generator = make_generator(device, seed + 1_000_003)
+    val_generator = make_generator(device, seed + 2_000_003)
     losses: list[dict[str, float | int | str]] = []
 
     for step in range(1, args.steps + 1):
-        input_ids, labels = make_batch(args.task, args.batch_size, args.seq_len, args.vocab_size, device)
+        input_ids, labels = make_batch(
+            args.task,
+            args.batch_size,
+            args.seq_len,
+            args.vocab_size,
+            device,
+            generator=train_generator,
+        )
         optimizer.zero_grad(set_to_none=True)
-        loss = model(input_ids, labels=labels)["loss"]
+        output = model(input_ids, labels=labels)
+        loss = output["loss"]
+        train_accuracy, train_tokens = supervised_accuracy(output["logits"], labels)
         loss.backward()
         torch.nn.utils.clip_grad_norm_(model.parameters(), args.grad_clip)
         optimizer.step()
-        losses.append({"step": step, "loss": float(loss.item()), "attention": attention})
+        losses.append(
+            {
+                "seed": seed,
+                "step": step,
+                "loss": float(loss.item()),
+                "attention": attention,
+                "train_accuracy": train_accuracy,
+                "train_tokens": train_tokens,
+            }
+        )
         if step == 1 or step % args.log_every == 0 or step == args.steps:
-            print(f"{attention:<14} step {step:>4}/{args.steps} loss {loss.item():.4f}")
+            print(
+                f"seed {seed:<6} {attention:<14} step {step:>4}/{args.steps} "
+                f"loss {loss.item():.4f} acc {train_accuracy:.3f}"
+            )
 
-    val_loss = evaluate(
+    eval_metrics = evaluate(
         model,
         task=args.task,
         batches=args.val_batches,
@@ -77,10 +145,12 @@ def train_one_attention(args: argparse.Namespace, attention: str, device: torch.
         seq_len=args.seq_len,
         vocab_size=args.vocab_size,
         device=device,
+        generator=val_generator,
     )
     return {
+        "seed": seed,
         "attention": attention,
-        "validation_loss": val_loss,
+        **eval_metrics,
         "loss_curve": losses,
         "config": dataclass_to_json_dict(config),
     }
@@ -100,9 +170,10 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--top-k", type=int, default=8)
     parser.add_argument("--window-size", type=int, default=64)
     parser.add_argument("--seed", type=int, default=1234)
+    parser.add_argument("--seeds", default="", help="Optional comma-separated seeds. Overrides --seed when set.")
     parser.add_argument("--output-dir", default="outputs/tiny_lm")
     parser.add_argument("--attention", default="hybrid", choices=["all", "dense", "sliding_window", "csa", "hca", "hybrid"])
-    parser.add_argument("--task", default="local", choices=["local", "retrieval"])
+    parser.add_argument("--task", default="local", choices=SUPPORTED_TASKS)
     parser.add_argument("--steps", type=int, default=50)
     parser.add_argument("--val-batches", type=int, default=4)
     parser.add_argument("--vocab-size", type=int, default=128)
@@ -114,14 +185,18 @@ def main(argv: list[str] | None = None) -> None:
     parser.add_argument("--use-attention-sink", action="store_true")
     args = parser.parse_args(argv)
 
-    set_seed(args.seed)
     device = torch.device(args.device)
     dtype = dtype_from_string(args.dtype)
     if device.type == "cpu" and dtype == torch.float16:
         dtype = torch.float32
 
     attentions = ["dense", "sliding_window", "csa", "hca", "hybrid"] if args.attention == "all" else [args.attention]
-    results = [train_one_attention(args, attention, device, dtype) for attention in attentions]
+    seeds = parse_int_list(args.seeds) if args.seeds else [args.seed]
+    results = [
+        train_one_attention(args, attention, device, dtype, seed=seed)
+        for seed in seeds
+        for attention in attentions
+    ]
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -132,19 +207,23 @@ def main(argv: list[str] | None = None) -> None:
     metrics = {
         "task": args.task,
         "seq_len": args.seq_len,
+        "seeds": seeds,
         "results": [{k: v for k, v in result.items() if k != "loss_curve"} for result in results],
     }
     metrics_path.write_text(json.dumps(metrics, indent=2), encoding="utf-8")
     config_path.write_text(json.dumps(vars(args), indent=2, sort_keys=True), encoding="utf-8")
     with curves_path.open("w", newline="", encoding="utf-8") as handle:
-        writer = csv.DictWriter(handle, fieldnames=["attention", "step", "loss"])
+        writer = csv.DictWriter(handle, fieldnames=["seed", "attention", "step", "loss", "train_accuracy", "train_tokens"])
         writer.writeheader()
         for result in results:
             writer.writerows(result["loss_curve"])
 
-    print("Validation losses:")
+    print("Validation metrics:")
     for result in results:
-        print(f"{result['attention']:<14} {result['validation_loss']:.4f}")
+        print(
+            f"seed {result['seed']:<6} {result['attention']:<14} "
+            f"loss {result['validation_loss']:.4f} acc {result['validation_accuracy']:.3f}"
+        )
     print(f"Wrote {metrics_path}")
     print(f"Wrote {curves_path}")
     print(f"Wrote {config_path}")
@@ -152,4 +231,3 @@ def main(argv: list[str] | None = None) -> None:
 
 if __name__ == "__main__":
     main()
-
